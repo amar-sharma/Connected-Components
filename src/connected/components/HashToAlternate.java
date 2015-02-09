@@ -265,7 +265,7 @@ public class HashToAlternate extends Configured implements Tool {
         JobConf conf = new JobConf();
         conf.setNumMapTasks(1);
         conf.setNumReduceTasks(1);
-        Job job = new Job(new Configuration(), "iteration");
+        Job job = new Job(conf, "iteration");
         job.setJarByClass(HashToAlternate.class);
         job.setReducerClass(Reduce.class);
         job.setOutputKeyClass(LongWritable.class);
