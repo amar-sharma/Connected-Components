@@ -226,7 +226,7 @@ public class HashToAlternate extends Configured implements Tool {
         Job job;
         while (terminationValue > 0) {
             job = jobConfig();
-            if (iterationCount % 2 == 0) {
+            if (iterationCount % 2 != 0) {
                 job.setMapperClass(MapM.class);
             } else {
                 job.setMapperClass(Map.class);
@@ -263,8 +263,8 @@ public class HashToAlternate extends Configured implements Tool {
 
     protected Job jobConfig() throws IOException {
         JobConf conf = new JobConf();
-        conf.setNumMapTasks(1);
-        conf.setNumReduceTasks(1);
+        conf.setNumMapTasks(50);
+        conf.setNumReduceTasks(50);
         Job job = new Job(conf, "iteration");
         job.setJarByClass(HashToAlternate.class);
         job.setReducerClass(Reduce.class);
@@ -274,7 +274,7 @@ public class HashToAlternate extends Configured implements Tool {
     }
 
     public static void main(String args[]) throws Exception {
-        System.setErr(nulled);
+        //System.setErr(nulled);
         int res = ToolRunner.run(new Configuration(), new HashToAlternate(), args);
         System.exit(res);
     }
