@@ -263,8 +263,6 @@ public class HashToAlternate extends Configured implements Tool {
 
     protected Job jobConfig() throws IOException {
         JobConf conf = new JobConf();
-        conf.setNumMapTasks(50);
-        conf.setNumReduceTasks(50);
         Job job = new Job(conf, "iteration");
         job.setJarByClass(HashToAlternate.class);
         job.setReducerClass(Reduce.class);
