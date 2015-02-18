@@ -93,7 +93,6 @@ public class HashToAlternate extends Configured implements Tool {
     }
 
     public static class Map extends Mapper<LongWritable, Text, LongWritable, Text> {
-
         @Override
         public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
             // System.setOut(nulled);
@@ -138,13 +137,6 @@ public class HashToAlternate extends Configured implements Tool {
                     // System.out.print(" [" + s + ", " + Vmin + "]");
                 }
             }
-            if (flag) {
-                // context.getCounter(MRrounds.rounds).increment(1L);
-            }
-            /*
-             * numMaps++; percentage = (long) ((numMaps / 5000000) * 100); if (prevpercentage != percentage) { prevpercentage
-             * = percentage; System.out.println(" Map " + percentage + "% Done"); }
-             */
         }
     }
 
@@ -203,11 +195,6 @@ public class HashToAlternate extends Configured implements Tool {
 
             list = s.toString();
             context.write(new Text(String.valueOf(key)), new Text(list));
-            /*
-             * numRed++; percentage = (long) ((numRed / 5000000) * 100); if (percentage % 5 == 0 && prevpercentage !=
-             * percentage) { prevpercentage = percentage; System.out.println(" Reduce " + percentage + "% Done"); }
-             */
-            // System.out.print("\n " + key + "\t" + list);
         }
     }
 
