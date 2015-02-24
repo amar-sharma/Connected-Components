@@ -33,6 +33,7 @@ import org.apache.hadoop.util.ToolRunner;
 
 public class HashToAlternate extends Configured implements Tool {
 
+    static boolean trace = false;
     static long numberOfComunications = 0;
     static long percentage = 0, prevpercentage = -1;
     static float numMaps = 0, numRed = 0;
@@ -41,6 +42,12 @@ public class HashToAlternate extends Configured implements Tool {
         public void write(int arg0) throws IOException {
         }
     });
+
+    public static void debugPrint(String s, boolean b) {
+        if (b) {
+            System.out.print(s);
+        }
+    }
 
     static enum MRrounds {
 
@@ -65,11 +72,11 @@ public class HashToAlternate extends Configured implements Tool {
                     }
                 }
             }
-            // System.out.print("\n Emit " + id + " :");
+            debugPrint("\n Emit " + id + " :", trace);
             // ////////////////////////////////EMIT (Vmin,Cv) //////////////////
             context.write(new LongWritable(Vmin), new Text(input[1]));
             numberOfComunications++;
-			// System.out.print(" [" + Vmin + ", (" + input[1] + ")]");
+            debugPrint(" [" + Vmin + ", (" + input[1] + ")]", trace);
             // /////////////////////////////////////
 
             // ////////////////////////////EMIT (u,Vmin) for all u in Cv
@@ -81,18 +88,15 @@ public class HashToAlternate extends Configured implements Tool {
                     if (u > Vmin) {
                         context.write(new LongWritable(u), new Text(String.valueOf(Vmin)));
                         numberOfComunications++;
-                        // System.out.print(" [" + s + ", " + Vmin + "]");
+                        debugPrint(" [" + s + ", " + Vmin + "]", trace);
                     }
                 }
-            }
-
-            if (flag) {
-                // context.getCounter(MRrounds.rounds).increment(1L);
             }
         }
     }
 
     public static class Map extends Mapper<LongWritable, Text, LongWritable, Text> {
+
         @Override
         public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
             // System.setOut(nulled);
@@ -121,20 +125,20 @@ public class HashToAlternate extends Configured implements Tool {
                     }
                 }
             }
-			// System.out.print("\n Emit " + id + " :");
+            debugPrint("\n Emit " + id + " :", trace);
 
             // ////////////////////////////////EMIT (Vmin,Cv) //////////////////
             if (!CgtV.equals(String.valueOf(id))) {
                 context.write(new LongWritable(Vmin), new Text(CgtV));
                 numberOfComunications++;
-                // System.out.print(" [" + Vmin + ", (" + CgtV + ")]");
+                debugPrint(" [" + Vmin + ", (" + CgtV + ")]", trace);
             }
             for (String s : input[1].split(",")) {
                 u = Long.parseLong(s);
                 if (s.length() > 0 && u > id) {
                     context.write(new LongWritable(u), new Text(String.valueOf(Vmin)));
                     numberOfComunications++;
-                    // System.out.print(" [" + s + ", " + Vmin + "]");
+                    debugPrint(" [" + s + ", " + Vmin + "]", trace);
                 }
             }
         }
@@ -195,6 +199,7 @@ public class HashToAlternate extends Configured implements Tool {
 
             list = s.toString();
             context.write(new Text(String.valueOf(key)), new Text(list));
+            debugPrint("\n " + key + "\t" + list, trace);
         }
     }
 
@@ -224,7 +229,6 @@ public class HashToAlternate extends Configured implements Tool {
                     fs.delete(inputPath, true);
                 }
                 inputPath = outputPath;
-
             }
             outputPath = new Path(basePath, iterationCount + "");
             FileInputFormat.setInputPaths(job, inputPath); // setting the
@@ -259,7 +263,7 @@ public class HashToAlternate extends Configured implements Tool {
     }
 
     public static void main(String args[]) throws Exception {
-        //System.setErr(nulled);
+        System.setErr(nulled);
         int res = ToolRunner.run(new Configuration(), new HashToAlternate(), args);
         System.exit(res);
     }

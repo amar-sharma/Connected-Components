@@ -23,7 +23,6 @@
  */
 package connected.components;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
@@ -31,6 +30,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -54,7 +54,7 @@ public class HashToMin extends Configured implements Tool {
 
         rounds
     }
-
+    static boolean trace = true;
     static long numberOfComunications = 0;
     public static PrintStream nulled = new PrintStream(new OutputStream() {
         @Override
@@ -62,6 +62,12 @@ public class HashToMin extends Configured implements Tool {
             return;
         }
     });
+
+    public static void debugPrint(String s, boolean b) {
+        if (b) {
+            System.out.print(s);
+        }
+    }
 
     public static class Map extends Mapper<LongWritable, Text, LongWritable, Text> {
 
@@ -82,31 +88,24 @@ public class HashToMin extends Configured implements Tool {
                     }
                 }
             }
-			// System.out.print("\n Emit " + id + " :");
+            debugPrint("\n Emit " + id + " :",trace);
 
-			// ////////////////////////////////EMIT (Vmin,Cv) //////////////////
+            // ////////////////////////////////EMIT (Vmin,Cv) //////////////////
             context.write(new LongWritable(Vmin), new Text(input[1]));
             numberOfComunications++;
-			// System.out.print(" [" + Vmin + ", (" + input[1] + ")]");
+            debugPrint(" [" + Vmin + ", (" + input[1] + ")]",trace);
 
-			// /////////////////////////////////////
-			// ////////////////////////////EMIT (u,Vmin) for all u in Cv
+            // /////////////////////////////////////
+            // ////////////////////////////EMIT (u,Vmin) for all u in Cv
             // /////////////
             for (String s : input[1].split(",")) {
                 u = Long.parseLong(s);
                 if (s.length() > 0) {
                     context.write(new LongWritable(u), new Text(String.valueOf(Vmin)));
                     numberOfComunications++;
-                    // System.out.print(" [" + s + ", " + Vmin + "]");
+                    debugPrint(" [" + s + ", " + Vmin + "]",trace);
                 }
             }
-            if (flag) {
-                // context.getCounter(MRrounds.rounds).increment(1L);
-            }
-            /*
-             * numMaps++; percentage = (long) ((numMaps / 5000000) * 100); if (prevpercentage != percentage) { prevpercentage
-             * = percentage; System.out.println(" Map " + percentage + "% Done"); }
-             */
         }
     }
 
@@ -134,7 +133,7 @@ public class HashToMin extends Configured implements Tool {
                 }
             }
 
-			// ///////////////////////////////find minimum and prepare list///////////
+            // ///////////////////////////////find minimum and prepare list///////////
             Iterator<String> set = edges.iterator();
             temp = null;
             long u;
@@ -169,54 +168,35 @@ public class HashToMin extends Configured implements Tool {
              * numRed++; percentage = (long) ((numRed / 5000000) * 100); if (percentage % 5 == 0 && prevpercentage !=
              * percentage) { prevpercentage = percentage; System.out.println(" Reduce " + percentage + "% Done"); }
              */
-            // System.out.print("\n " + key + "\t" + list);
+            debugPrint("\n " + key + "\t" + list,trace);
         }
-    }
-
-    public static boolean deleteDir(File dir) {
-        if (dir.isDirectory()) {
-            String[] children = dir.list();
-            for (int i = 0; i < children.length; i++) {
-                boolean success = deleteDir(new File(dir, children[i]));
-                if (!success) {
-                    return false;
-                }
-            }
-        }
-        return dir.delete();
     }
 
     @Override
     public int run(String[] args) throws Exception {
         long precomm = 0;
-        deleteDir(new File("/home/ro0t/Desktop/BTP/output-test-Min"));
+        Path inputPath = new Path(args[0]);
+        Path basePath = new Path(args[1]);
+        Path outputPath = null;
+        FileSystem fs = FileSystem.get(getConf());
+        fs.delete(basePath, true);
         long startTime = System.nanoTime();
-        // ... the code being measured ...
-
         int iterationCount = 0;
-        // iterationCount = 21;
         long terminationValue = 1;
-        String input, output;
         Job job;
-        // args[0] = "/home/ro0t/Desktop/graph/flickr.txt";
         while (terminationValue > 0) {
             job = jobConfig();
-
-            if (iterationCount == 0) // for the first iteration the input will
-            // be the first input argument
-            {
-                input = args[0];
-            } else {
-                input = args[1] + iterationCount;
-                deleteDir(new File(args[1] + (iterationCount - 1)));
+            if (iterationCount != 0) {
+                if (iterationCount > 1) {
+                    fs.delete(inputPath, true);
+                }
+                inputPath = outputPath;
             }
-            output = args[1] + (iterationCount + 1);
-            FileInputFormat.setInputPaths(job, new Path(input)); // setting the
-            FileOutputFormat.setOutputPath(job, new Path(output)); // setting
+            outputPath = new Path(basePath, iterationCount + "");
+            FileInputFormat.setInputPaths(job, inputPath); // setting the
+            FileOutputFormat.setOutputPath(job, outputPath); // setting
             job.waitForCompletion(true); // wait for the job to complete
-
             Counters jobCntrs = job.getCounters();
-            // Counter jobCntr=job.
             terminationValue = jobCntrs.findCounter(MRrounds.rounds).getValue();
             iterationCount++;
             System.out.println("\n Round " + iterationCount + " => #Communications : " + (numberOfComunications - precomm));
