@@ -46,7 +46,8 @@ public class HashToAlternateWithSS extends Configured implements Tool {
     }
 
     static enum MRrounds {
-        rounds,numberOfComunications,precomm
+
+        rounds, numberOfComunications, precomm
     }
 
     public static class MapMSS extends Mapper<LongWritable, Text, LongPair, Text> {
@@ -57,38 +58,42 @@ public class HashToAlternateWithSS extends Configured implements Tool {
             long Vmin, id;
             id = Long.parseLong(input[0]);
             Vmin = id;
+            debugPrint("\n Emit " + id + " :", trace);
             boolean flag = false;
             for (String s : input[1].split(",")) {
                 if (s.length() > 0) {
                     long u = Long.parseLong(s);
-                    if(!flag){
-                        Vmin = u;
+                    if (!flag) {
+                        Vmin = Vmin > u ? u : Vmin;
                         flag = false;
                     }
-                    context.write(new LongPair(Vmin,u), new Text(String.valueOf(u)));
+                    if (Vmin != u) {
+                        context.write(new LongPair(Vmin, u), new Text(String.valueOf(u)));
+                        debugPrint(" [(" + new LongPair(Vmin, u) + "), (" + u + ")]", trace);
+                    }
                 }
             }
-            /*debugPrint("\n Emit " + id + " :", trace);
+            /*
 
-            if (!input[1].equals(String.valueOf(id))) {
+             if (!input[1].equals(String.valueOf(id))) {
 
-                // ////////////////////////////////EMIT (Vmin,Cv) //////////////////
-                context.write(new LongWritable(Vmin), new Text(input[1]));
-                context.getCounter(MRrounds.numberOfComunications).increment(1L);
-                //debugPrint(" [" + Vmin + ", (" + input[1] + ")]", trace);
-            }
-            // /////////////////////////////////////
-            // ////////////////////////////EMIT (u,Vmin) for all u in Cv
-            // ////////////*/
+             // ////////////////////////////////EMIT (Vmin,Cv) //////////////////
+             context.write(new LongWritable(Vmin), new Text(input[1]));
+             context.getCounter(MRrounds.numberOfComunications).increment(1L);
+             //debugPrint(" [" + Vmin + ", (" + input[1] + ")]", trace);
+             }
+             // /////////////////////////////////////
+             // ////////////////////////////EMIT (u,Vmin) for all u in Cv
+             // ////////////*/
             long u;
             Text vmin = new Text(String.valueOf(Vmin));
             for (String s : input[1].split(",")) {
                 if (s.length() > 0) {
                     u = Long.parseLong(s);
                     if (u > Vmin) {
-                        context.write(new LongPair(u,Vmin), vmin);
+                        context.write(new LongPair(u, Vmin), vmin);
                         context.getCounter(MRrounds.numberOfComunications).increment(1L);
-                        //debugPrint(" [" + s + ", " + Vmin + "]", trace);
+                        debugPrint(" [(" + new LongPair(u, Vmin) + "), " + Vmin + "]", trace);
                     }
                 }
             }
@@ -104,62 +109,73 @@ public class HashToAlternateWithSS extends Configured implements Tool {
             long Vmin, id, u;
             id = Long.parseLong(input[0]);
             Vmin = id;
+            debugPrint("\n Emit " + id + " :", trace);
             boolean first = true, flag = false;
             for (String s : input[1].split(",")) {
                 if (s.length() > 0) {
                     u = Long.parseLong(s);
-                    if(first)
-                    {
+                    if (first) {
                         Vmin = u;
                         first = false;
-                    }
-                    else if (u > id) {
-                        context.write(new LongPair(Vmin,u), new Text(String.valueOf(u)));
-                        debugPrint("\n Emit " + new LongPair(Vmin,u).toString() + " ", trace);
+                    } else if (u > id) {
+                        context.write(new LongPair(Vmin, u), new Text(String.valueOf(u)));
+                        debugPrint(" [(" + new LongPair(Vmin, u) + "), (" + u + ")]", trace);
                     }
                 }
             }
             //debugPrint("\n Emit " + id + " :", trace);
 
             /* ////////////////////////////////EMIT (Vmin,Cv) //////////////////
-            if (CgtV.toString().length() != 0) {
-                context.write(new LongWritable(Vmin), new Text(CgtV.toString()));
-                context.getCounter(MRrounds.numberOfComunications).increment(1L);
-                //debugPrint(" [" + Vmin + ", (" + CgtV.toString() + ")]", trace);
-            }*/
+             if (CgtV.toString().length() != 0) {
+             context.write(new LongWritable(Vmin), new Text(CgtV.toString()));
+             context.getCounter(MRrounds.numberOfComunications).increment(1L);
+             //debugPrint(" [" + Vmin + ", (" + CgtV.toString() + ")]", trace);
+             }*/
             Text vmin = new Text(String.valueOf(Vmin));
             for (String s : input[1].split(",")) {
                 u = Long.parseLong(s);
                 if (s.length() > 0 && u > id) {
-                    context.write(new LongPair(u,Vmin), vmin);
+                    context.write(new LongPair(u, Vmin), vmin);
                     context.getCounter(MRrounds.numberOfComunications).increment(1L);
-                    //debugPrint(" [" + s + ", " + Vmin + "]", trace);
+                    debugPrint(" [(" + new LongPair(u, Vmin) + "), " + Vmin + "]", trace);
                 }
             }
         }
     }
 
     public static class ReduceSS extends Reducer<LongPair, Text, LongWritable, Text> {
+
         @Override
         public void reduce(LongPair key, Iterable<Text> value, Context context) throws IOException,
                 InterruptedException {
             StringBuilder list;
+            boolean flag = false;
             list = new StringBuilder();
-           
+            long id = key.getFirst();
             Iterator<Text> itr = value.iterator();
-            String temp,prev="";
-            if(itr.hasNext()){
-                list.append(itr.next().toString());
+            long temp, prev = id;
+            
+            if (itr.hasNext()) {
+                long min = Long.parseLong(itr.next().toString());
+                list.append(min);
+                prev = min;
             }
             while (itr.hasNext()) {
-                temp = itr.next().toString();
-                if(!temp.equals(prev)){
+                temp = Long.parseLong(itr.next().toString());
+                if (temp != prev && temp != id) {
+                    if(id > prev)
+                        flag=true;
                     list.append(",");
                     list.append(temp);
+                    prev = temp;
                 }
             }
-            context.write(new LongWritable(key.getFirst()),new Text(list.toString()));
-            //debugPrint("\n " + key + "\t" + list, trace);
+           
+            if (flag) {
+                context.getCounter(MRrounds.rounds).increment(1L);
+            }
+            
+            context.write(new LongWritable(key.getFirst()), new Text(list.toString()));
         }
     }
 
@@ -185,7 +201,7 @@ public class HashToAlternateWithSS extends Configured implements Tool {
             if (iterationCount != 0) {// for the first iteration the input will
                 // be the first input argument
                 if (iterationCount > 1) {
-                   // fs.delete(inputPath, true);
+                    // fs.delete(inputPath, true);
                 }
                 inputPath = outputPath;
             }
@@ -196,7 +212,7 @@ public class HashToAlternateWithSS extends Configured implements Tool {
             Counters jobCntrs = job.getCounters();
             terminationValue = jobCntrs.findCounter(MRrounds.rounds).getValue();
             iterationCount++;
-            long comm=jobCntrs.findCounter(MRrounds.numberOfComunications).getValue();
+            long comm = jobCntrs.findCounter(MRrounds.numberOfComunications).getValue();
             long precom = jobCntrs.findCounter(MRrounds.precomm).getValue();
             System.out.println("\n Round " + iterationCount + " => #Communications : " + (comm - precom));
             jobCntrs.findCounter(MRrounds.precomm).setValue(comm);
@@ -222,7 +238,7 @@ public class HashToAlternateWithSS extends Configured implements Tool {
     }
 
     public static void main(String args[]) throws Exception {
-        //System.setErr(nulled);
+        System.setErr(nulled);
         int res = ToolRunner.run(new Configuration(), new HashToAlternateWithSS(), args);
         System.exit(res);
     }
