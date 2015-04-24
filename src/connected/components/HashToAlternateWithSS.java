@@ -30,7 +30,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-public class HashToAlternate extends Configured implements Tool {
+public class HashToAlternateWithSS extends Configured implements Tool {
 
     static boolean trace = false;
     static long numberOfComunications = 0;
@@ -248,7 +248,7 @@ public class HashToAlternate extends Configured implements Tool {
     protected Job jobConfig() throws IOException {
         JobConf conf = new JobConf();
         Job job = new Job(conf, "iteration");
-        job.setJarByClass(HashToAlternate.class);
+        job.setJarByClass(HashToAlternateWithSS.class);
         job.setReducerClass(Reduce.class);
         job.setOutputKeyClass(LongWritable.class);
         job.setOutputValueClass(Text.class);
