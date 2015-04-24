@@ -103,13 +103,12 @@ public class HashToAlternate extends Configured implements Tool {
             long Vmin, id, u;
             id = Long.parseLong(input[0]);
             Vmin = id;
-            boolean first = true, flag = false;
+            boolean first = true;
             StringBuilder CgtV = new StringBuilder();
             for (String s : input[1].split(",")) {
                 if (s.length() > 0) {
                     u = Long.parseLong(s);
                     if (u < Vmin) {
-                        flag = true;
                         Vmin = u;
                     } else if (u > id) {
                         if (first) {

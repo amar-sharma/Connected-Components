@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package connected.components;
+package SecondarySort;
 
 /**
  *
@@ -12,7 +12,6 @@ package connected.components;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
-import java.util.HashSet;
 import java.util.Iterator;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -32,7 +31,7 @@ import org.apache.hadoop.util.ToolRunner;
 
 public class HashToAlternateWithSS extends Configured implements Tool {
 
-    static boolean trace = false;
+    static boolean trace = true;
     static long numberOfComunications = 0;
     public static PrintStream nulled = new PrintStream(new OutputStream() {
         @Override
@@ -50,7 +49,7 @@ public class HashToAlternateWithSS extends Configured implements Tool {
         rounds,numberOfComunications,precomm
     }
 
-    public static class MapM extends Mapper<LongWritable, Text, LongWritable, Text> {
+    public static class MapMSS extends Mapper<LongWritable, Text, LongPair, Text> {
 
         @Override
         public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
@@ -59,16 +58,17 @@ public class HashToAlternateWithSS extends Configured implements Tool {
             id = Long.parseLong(input[0]);
             Vmin = id;
             boolean flag = false;
-
             for (String s : input[1].split(",")) {
                 if (s.length() > 0) {
-                    if (Long.parseLong(s) < Vmin) {
-                        flag = true;
-                        Vmin = Long.parseLong(s);
+                    long u = Long.parseLong(s);
+                    if(!flag){
+                        Vmin = u;
+                        flag = false;
                     }
+                    context.write(new LongPair(Vmin,u), new Text(String.valueOf(u)));
                 }
             }
-            //debugPrint("\n Emit " + id + " :", trace);
+            /*debugPrint("\n Emit " + id + " :", trace);
 
             if (!input[1].equals(String.valueOf(id))) {
 
@@ -79,13 +79,14 @@ public class HashToAlternateWithSS extends Configured implements Tool {
             }
             // /////////////////////////////////////
             // ////////////////////////////EMIT (u,Vmin) for all u in Cv
-            // /////////////
+            // ////////////*/
             long u;
+            Text vmin = new Text(String.valueOf(Vmin));
             for (String s : input[1].split(",")) {
                 if (s.length() > 0) {
                     u = Long.parseLong(s);
                     if (u > Vmin) {
-                        context.write(new LongWritable(u), new Text(String.valueOf(Vmin)));
+                        context.write(new LongPair(u,Vmin), vmin);
                         context.getCounter(MRrounds.numberOfComunications).increment(1L);
                         //debugPrint(" [" + s + ", " + Vmin + "]", trace);
                     }
@@ -94,7 +95,7 @@ public class HashToAlternateWithSS extends Configured implements Tool {
         }
     }
 
-    public static class Map extends Mapper<LongWritable, Text, LongWritable, Text> {
+    public static class MapSS extends Mapper<LongWritable, Text, LongPair, Text> {
 
         @Override
         public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
@@ -104,36 +105,33 @@ public class HashToAlternateWithSS extends Configured implements Tool {
             id = Long.parseLong(input[0]);
             Vmin = id;
             boolean first = true, flag = false;
-            StringBuilder CgtV = new StringBuilder();
             for (String s : input[1].split(",")) {
                 if (s.length() > 0) {
                     u = Long.parseLong(s);
-                    if (u < Vmin) {
-                        flag = true;
+                    if(first)
+                    {
                         Vmin = u;
-                    } else if (u > id) {
-                        if (first) {
-                            CgtV.append(s);
-                            first = false;
-                        } else {
-                            CgtV.append(',');
-                            CgtV.append(s);
-                        }
+                        first = false;
+                    }
+                    else if (u > id) {
+                        context.write(new LongPair(Vmin,u), new Text(String.valueOf(u)));
+                        debugPrint("\n Emit " + new LongPair(Vmin,u).toString() + " ", trace);
                     }
                 }
             }
             //debugPrint("\n Emit " + id + " :", trace);
 
-            // ////////////////////////////////EMIT (Vmin,Cv) //////////////////
+            /* ////////////////////////////////EMIT (Vmin,Cv) //////////////////
             if (CgtV.toString().length() != 0) {
                 context.write(new LongWritable(Vmin), new Text(CgtV.toString()));
                 context.getCounter(MRrounds.numberOfComunications).increment(1L);
                 //debugPrint(" [" + Vmin + ", (" + CgtV.toString() + ")]", trace);
-            }
+            }*/
+            Text vmin = new Text(String.valueOf(Vmin));
             for (String s : input[1].split(",")) {
                 u = Long.parseLong(s);
                 if (s.length() > 0 && u > id) {
-                    context.write(new LongWritable(u), new Text(String.valueOf(Vmin)));
+                    context.write(new LongPair(u,Vmin), vmin);
                     context.getCounter(MRrounds.numberOfComunications).increment(1L);
                     //debugPrint(" [" + s + ", " + Vmin + "]", trace);
                 }
@@ -141,61 +139,26 @@ public class HashToAlternateWithSS extends Configured implements Tool {
         }
     }
 
-    public static class Reduce extends Reducer<LongWritable, Text, Text, Text> {
-
+    public static class ReduceSS extends Reducer<LongPair, Text, LongWritable, Text> {
         @Override
-        public void reduce(LongWritable key, Iterable<Text> value, Context context) throws IOException,
+        public void reduce(LongPair key, Iterable<Text> value, Context context) throws IOException,
                 InterruptedException {
-            boolean flag = false;
-            String list = "";
-            long min = Long.parseLong(key.toString());
-            long id = min;
-            String temp;
-            StringBuffer s = new StringBuffer();
-            HashSet<String> edges = new HashSet<String>();
-            // /////////////////add input to Hashset////////////////
+            StringBuilder list;
+            list = new StringBuilder();
+           
             Iterator<Text> itr = value.iterator();
+            String temp,prev="";
+            if(itr.hasNext()){
+                list.append(itr.next().toString());
+            }
             while (itr.hasNext()) {
                 temp = itr.next().toString();
-
-                for (String splt : temp.split(",")) {
-                    if (splt.length() > 0) {
-                        edges.add(splt);
-                    }
+                if(!temp.equals(prev)){
+                    list.append(",");
+                    list.append(temp);
                 }
             }
-
-            // ///////////////////////////////find minimum and prepare list///////////
-            Iterator<String> set = edges.iterator();
-            temp = null;
-            long u;
-            if (set.hasNext()) {
-                temp = set.next();
-                s.append(temp);
-                u = Long.parseLong(temp);
-                if (u < min) {
-                    min = u;
-                }
-            }
-            while (set.hasNext()) {
-                temp = set.next();
-                s.append(",");
-                s.append(temp);
-                u = Long.parseLong(temp);
-                if (u < min) {
-                    min = u;
-                }
-                if (id > min) {
-                    flag = true;
-                }
-            }
-
-            if (flag) {
-                context.getCounter(MRrounds.rounds).increment(1L);
-            }
-
-            list = s.toString();
-            context.write(new Text(String.valueOf(key)), new Text(list));
+            context.write(new LongWritable(key.getFirst()),new Text(list.toString()));
             //debugPrint("\n " + key + "\t" + list, trace);
         }
     }
@@ -215,14 +178,14 @@ public class HashToAlternateWithSS extends Configured implements Tool {
         while (terminationValue > 0) {
             job = jobConfig();
             if (iterationCount % 2 != 0) {
-                job.setMapperClass(MapM.class);
+                job.setMapperClass(MapMSS.class);
             } else {
-                job.setMapperClass(Map.class);
+                job.setMapperClass(MapSS.class);
             }
             if (iterationCount != 0) {// for the first iteration the input will
                 // be the first input argument
                 if (iterationCount > 1) {
-                    fs.delete(inputPath, true);
+                   // fs.delete(inputPath, true);
                 }
                 inputPath = outputPath;
             }
@@ -249,15 +212,18 @@ public class HashToAlternateWithSS extends Configured implements Tool {
         JobConf conf = new JobConf();
         Job job = new Job(conf, "iteration");
         job.setJarByClass(HashToAlternateWithSS.class);
-        job.setReducerClass(Reduce.class);
-        job.setOutputKeyClass(LongWritable.class);
+        job.setReducerClass(ReduceSS.class);
+        job.setPartitionerClass(LongPair.HPartitioner.class);
+        job.setSortComparatorClass(LongPair.Comparator.class);
+        job.setGroupingComparatorClass(LongPair.GroupComparator.class);
+        job.setOutputKeyClass(LongPair.class);
         job.setOutputValueClass(Text.class);
         return job;
     }
 
     public static void main(String args[]) throws Exception {
-        System.setErr(nulled);
-        int res = ToolRunner.run(new Configuration(), new HashToAlternate(), args);
+        //System.setErr(nulled);
+        int res = ToolRunner.run(new Configuration(), new HashToAlternateWithSS(), args);
         System.exit(res);
     }
 }
