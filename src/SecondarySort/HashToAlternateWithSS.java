@@ -67,10 +67,10 @@ public class HashToAlternateWithSS extends Configured implements Tool {
                         Vmin = Vmin > u ? u : Vmin;
                         flag = false;
                     }
-                    if (Vmin != u) {
+                    //if (Vmin != u) {
                         context.write(new LongPair(Vmin, u), new Text(String.valueOf(u)));
                         //debugPrint(" [(" + new LongPair(Vmin, u) + "), (" + u + ")]", trace);
-                    }
+                    //}
                 }
             }
             /*
@@ -118,7 +118,7 @@ public class HashToAlternateWithSS extends Configured implements Tool {
                         Vmin = Vmin > u ? u : Vmin;
                         first = true;
                     } 
-                    if (u > id) {
+                    if (u >= id) {
                         context.write(new LongPair(Vmin, u), new Text(String.valueOf(u)));
                         ////debugPrint(" [(" + new LongPair(Vmin, u) + "), (" + u + ")]", trace);
                     }
@@ -136,11 +136,10 @@ public class HashToAlternateWithSS extends Configured implements Tool {
             // System.out.println(id+" # "+Vmin);
             for (String s : input[1].split(",")) {
                 u = Long.parseLong(s);
-                if (s.length() > 0 && u > id) {
+                if (s.length() > 0 && u >= id) {
                     context.write(new LongPair(u, Vmin), vmin);
                     context.getCounter(MRrounds.numberOfComunications).increment(1L);
 
-//debugPrint(" [(" + new LongPair(u, Vmin) + "), " + Vmin + "]", trace);
                 }
             }
         }

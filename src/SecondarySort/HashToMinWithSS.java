@@ -1,25 +1,7 @@
 /*
- * The MIT License
- *
- * Copyright 2015 ro0t.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
  */
 package SecondarySort;
 
@@ -68,24 +50,27 @@ public class HashToMinWithSS extends Configured implements Tool {
         rounds, numberOfComunications, precomm
     }
 
-    public static class MapSS extends Mapper<LongWritable, Text, LongPair, Text> {
+    public static class MapMSS extends Mapper<LongWritable, Text, LongPair, Text> {
 
-        public void map(LongWritable key, Text value, Reducer.Context context) throws IOException, InterruptedException {
+        @Override
+        public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
             String[] input = value.toString().split("\t");
             long Vmin, id;
             id = Long.parseLong(input[0]);
             Vmin = id;
-            debugPrint("\n Emit " + id + " :", trace);
+            //debugPrint("\n Emit " + id + " :", trace);
             boolean flag = false;
             for (String s : input[1].split(",")) {
                 if (s.length() > 0) {
                     long u = Long.parseLong(s);
                     if (!flag) {
                         Vmin = Vmin > u ? u : Vmin;
-                        flag = true;
+                        flag = false;
                     }
-                        context.write(new LongPair(Vmin, u), new Text(String.valueOf(u)));
-                        debugPrint(" [(" + new LongPair(Vmin, u) + "), (" + u + ")]", trace);
+
+                    context.write(new LongPair(Vmin, u), new Text(String.valueOf(u)));
+                        //debugPrint(" [(" + new LongPair(Vmin, u) + "), (" + u + ")]", trace);
+
                 }
             }
             /*
@@ -108,16 +93,17 @@ public class HashToMinWithSS extends Configured implements Tool {
                     if (u > Vmin) {
                         context.write(new LongPair(u, Vmin), vmin);
                         context.getCounter(MRrounds.numberOfComunications).increment(1L);
-                        debugPrint(" [(" + new LongPair(u, Vmin) + "), " + Vmin + "]", trace);
+                        //debugPrint(" [(" + new LongPair(u, Vmin) + "), " + Vmin + "]", trace);
                     }
                 }
             }
         }
     }
-    
+
     public static class ReduceSS extends Reducer<LongPair, Text, LongWritable, Text> {
 
-        public void reduce(LongPair key, Iterable<Text> value, Reducer.Context context) throws IOException,
+        @Override
+        public void reduce(LongPair key, Iterable<Text> value, Context context) throws IOException,
                 InterruptedException {
             StringBuilder list;
             boolean flag = false;
@@ -164,7 +150,11 @@ public class HashToMinWithSS extends Configured implements Tool {
         Job job;
         while (terminationValue > 0) {
             job = jobConfig();
-            
+            if (iterationCount % 2 != 0) {
+                job.setMapperClass(MapMSS.class);
+            } else {
+                job.setMapperClass(MapMSS.class);
+            }
             if (iterationCount != 0) {// for the first iteration the input will
                 // be the first input argument
                 if (iterationCount > 1) {
@@ -184,8 +174,9 @@ public class HashToMinWithSS extends Configured implements Tool {
             System.out.println("\n Round " + iterationCount + " => #Communications : " + (comm - precom));
             jobCntrs.findCounter(MRrounds.precomm).setValue(comm);
         }
-        if(iterationCount>1)
+        if (iterationCount > 1) {
             fs.delete(inputPath, trace);
+        }
         long estimatedTime = System.nanoTime() - startTime;
         System.out.println(" \nNumber of MR rounds: " + iterationCount + " Number of Communications: "
                 + numberOfComunications + " Time of Completion: " + estimatedTime / 1000000000 + "\n");
@@ -197,7 +188,6 @@ public class HashToMinWithSS extends Configured implements Tool {
         JobConf conf = new JobConf();
         Job job = new Job(conf, "iteration");
         job.setJarByClass(HashToMinWithSS.class);
-        job.setMapperClass(MapSS.class);
         job.setReducerClass(ReduceSS.class);
         job.setPartitionerClass(LongPair.HPartitioner.class);
         job.setSortComparatorClass(LongPair.Comparator.class);
@@ -208,9 +198,8 @@ public class HashToMinWithSS extends Configured implements Tool {
     }
 
     public static void main(String args[]) throws Exception {
-        //System.setErr(nulled);
+        System.setErr(nulled);
         int res = ToolRunner.run(new Configuration(), new HashToMinWithSS(), args);
         System.exit(res);
     }
 }
-
