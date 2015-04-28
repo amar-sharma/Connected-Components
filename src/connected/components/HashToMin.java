@@ -175,6 +175,7 @@ public class HashToMin extends Configured implements Tool {
     @Override
     public int run(String[] args) throws Exception {
         long precomm = 0;
+        args[0]="/home/ro0t/Desktop/BTP/graph/input1.txt";  
         Path inputPath = new Path(args[0]);
         Path basePath = new Path(args[1]);
         Path outputPath = null;

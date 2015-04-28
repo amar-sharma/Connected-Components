@@ -74,17 +74,22 @@ public class inputMaker extends Configured implements Tool {
         public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
             String[] input = value.toString().split("\t");
             long id;
-            id = Long.parseLong(input[0]);
-            boolean flag = false;
-            for (String s : input[1].split(",")) {
-                if (s.length() > 0) {
-                    long u = Long.parseLong(s);
-                    context.write(new LongPair(id, u), new Text(String.valueOf(u)));
-                    context.write(new LongPair(u, id), new Text(String.valueOf(id)));
-                    context.getCounter(MRrounds.edges).increment(1L);
+            try {
+                id = Long.parseLong(input[0]);
+                boolean flag = false;
+                for (String s : input[1].split(",")) {
+                    if (s.length() > 0) {
+                        long u = Long.parseLong(s);
+                        context.write(new LongPair(id, u), new Text(String.valueOf(u)));
+                        context.write(new LongPair(u, id), new Text(String.valueOf(id)));
+                        context.getCounter(MRrounds.edges).increment(1L);
+                    }
                 }
+                context.write(new LongPair(id, id), new Text(String.valueOf(id)));
+            } catch (Exception ex) {
+
             }
-            context.write(new LongPair(id, id), new Text(String.valueOf(id)));
+
         }
     }
 
@@ -118,7 +123,7 @@ public class inputMaker extends Configured implements Tool {
     @Override
     public int run(String[] args) throws Exception {
         // TODO Auto-generated method stub
-        args[0] = "/home/ro0t/Desktop/BTP/graph/inpalt";
+        args[0] = "/home/ro0t/Desktop/BTP/graph/input1.txt";
         Path inputPath = new Path(args[0]);
         Path outputPath = new Path(args[1]);
         FileSystem fs = FileSystem.get(getConf());
@@ -157,7 +162,7 @@ public class inputMaker extends Configured implements Tool {
     }
 
     public static void main(String args[]) throws Exception {
-        System.setErr(nulled);
+        //System.setErr(nulled);
         int res = ToolRunner.run(new Configuration(), new inputMaker(), args);
         System.exit(res);
     }

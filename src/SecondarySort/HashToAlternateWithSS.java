@@ -57,34 +57,19 @@ public class HashToAlternateWithSS extends Configured implements Tool {
             String[] input = value.toString().split("\t");
             long Vmin, id;
             id = Long.parseLong(input[0]);
-            Vmin = id;
-            //debugPrint("\n Emit " + id + " :", trace);
-            boolean flag = false;
-            for (String s : input[1].split(",")) {
+            String[] splitString = input[1].split(",");
+            Vmin = Long.parseLong(splitString[0]);
+            for (String s : splitString) {
                 if (s.length() > 0) {
                     long u = Long.parseLong(s);
-                    if (!flag) {
-                        Vmin = Vmin > u ? u : Vmin;
-                        flag = false;
-                    }
                     //if (Vmin != u) {
-                        context.write(new LongPair(Vmin, u), new Text(String.valueOf(u)));
-                        //debugPrint(" [(" + new LongPair(Vmin, u) + "), (" + u + ")]", trace);
+                    context.write(new LongPair(Vmin, u), new Text(String.valueOf(u)));
+                    context.getCounter(MRrounds.numberOfComunications).increment(1L);
+
+                    //debugPrint(" [(" + new LongPair(Vmin, u) + "), (" + u + ")]", trace);
                     //}
                 }
             }
-            /*
-
-             if (!input[1].equals(String.valueOf(id))) {
-
-             // ////////////////////////////////EMIT (Vmin,Cv) //////////////////
-             context.write(new LongWritable(Vmin), new Text(input[1]));
-             context.getCounter(MRrounds.numberOfComunications).increment(1L);
-             ////debugPrint(" [" + Vmin + ", (" + input[1] + ")]", trace);
-             }
-             // /////////////////////////////////////
-             // ////////////////////////////EMIT (u,Vmin) for all u in Cv
-             // ////////////*/
             long u;
             Text vmin = new Text(String.valueOf(Vmin));
             for (String s : input[1].split(",")) {
@@ -108,32 +93,18 @@ public class HashToAlternateWithSS extends Configured implements Tool {
             String[] input = value.toString().split("\t");
             long Vmin, id, u;
             id = Long.parseLong(input[0]);
-            Vmin = id;
-            //debugPrint("\n Emit " + id + " :", trace);
-            boolean first = true;
-            for (String s : input[1].split(",")) {
+            String[] splitString = input[1].split(",");
+            Vmin = Long.parseLong(splitString[0]);
+            for (String s : splitString) {
                 if (s.length() > 0) {
                     u = Long.parseLong(s);
-                    if (first) {
-                        Vmin = Vmin > u ? u : Vmin;
-                        first = true;
-                    } 
                     if (u >= id) {
                         context.write(new LongPair(Vmin, u), new Text(String.valueOf(u)));
-                        ////debugPrint(" [(" + new LongPair(Vmin, u) + "), (" + u + ")]", trace);
+                        context.getCounter(MRrounds.numberOfComunications).increment(1L);
                     }
                 }
             }
-            ////debugPrint("\n Emit " + id + " :", trace);
-
-            /* ////////////////////////////////EMIT (Vmin,Cv) //////////////////
-             if (CgtV.toString().length() != 0) {
-             context.write(new LongWritable(Vmin), new Text(CgtV.toString()));
-             context.getCounter(MRrounds.numberOfComunications).increment(1L);
-             ////debugPrint(" [" + Vmin + ", (" + CgtV.toString() + ")]", trace);
-             }*/
             Text vmin = new Text(String.valueOf(Vmin));
-            // System.out.println(id+" # "+Vmin);
             for (String s : input[1].split(",")) {
                 u = Long.parseLong(s);
                 if (s.length() > 0 && u >= id) {
@@ -185,6 +156,7 @@ public class HashToAlternateWithSS extends Configured implements Tool {
     public int run(String[] args) throws Exception {
         // TODO Auto-generated method stub
         long startTime = System.nanoTime();
+        args[0]="/home/ro0t/Desktop/BTP/graph/utube";
         Path inputPath = new Path(args[0]);
         Path basePath = new Path(args[1]);
         Path outputPath = null;
@@ -223,8 +195,7 @@ public class HashToAlternateWithSS extends Configured implements Tool {
             fs.delete(inputPath, trace);
         }
         long estimatedTime = System.nanoTime() - startTime;
-        System.out.println(" \nNumber of MR rounds: " + iterationCount + " Number of Communications: "
-                + numberOfComunications + " Time of Completion: " + estimatedTime / 1000000000 + "\n");
+        System.out.println(" \nNumber of MR rounds: " + iterationCount + " Time of Completion: " + estimatedTime / 1000000000 + "\n");
         return 0;
 
     }

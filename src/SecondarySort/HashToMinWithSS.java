@@ -60,6 +60,7 @@ public class HashToMinWithSS extends Configured implements Tool {
             Vmin = id;
             //debugPrint("\n Emit " + id + " :", trace);
             boolean flag = false;
+            String [] sx = input[1].split(",");
             for (String s : input[1].split(",")) {
                 if (s.length() > 0) {
                     long u = Long.parseLong(s);
@@ -69,6 +70,7 @@ public class HashToMinWithSS extends Configured implements Tool {
                     }
 
                     context.write(new LongPair(Vmin, u), new Text(String.valueOf(u)));
+                    context.getCounter(MRrounds.numberOfComunications).increment(1L);
                         //debugPrint(" [(" + new LongPair(Vmin, u) + "), (" + u + ")]", trace);
 
                 }
@@ -170,6 +172,7 @@ public class HashToMinWithSS extends Configured implements Tool {
             terminationValue = jobCntrs.findCounter(MRrounds.rounds).getValue();
             iterationCount++;
             long comm = jobCntrs.findCounter(MRrounds.numberOfComunications).getValue();
+            numberOfComunications = comm;
             long precom = jobCntrs.findCounter(MRrounds.precomm).getValue();
             System.out.println("\n Round " + iterationCount + " => #Communications : " + (comm - precom));
             jobCntrs.findCounter(MRrounds.precomm).setValue(comm);
@@ -178,8 +181,7 @@ public class HashToMinWithSS extends Configured implements Tool {
             fs.delete(inputPath, trace);
         }
         long estimatedTime = System.nanoTime() - startTime;
-        System.out.println(" \nNumber of MR rounds: " + iterationCount + " Number of Communications: "
-                + numberOfComunications + " Time of Completion: " + estimatedTime / 1000000000 + "\n");
+        System.out.println(" \nNumber of MR rounds: " + iterationCount + " Time of Completion: " + estimatedTime / 1000000000 + "\n");
         return 0;
 
     }

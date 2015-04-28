@@ -32,8 +32,7 @@ import org.apache.hadoop.util.ToolRunner;
 
 public class HashToAlternate extends Configured implements Tool {
 
-    static boolean trace = false;
-    static long numberOfComunications = 0;
+    static boolean trace = true;
     public static PrintStream nulled = new PrintStream(new OutputStream() {
         @Override
         public void write(int arg0) throws IOException {
@@ -47,7 +46,8 @@ public class HashToAlternate extends Configured implements Tool {
     }
 
     static enum MRrounds {
-        rounds,numberOfComunications,precomm
+
+        rounds, numberOfComunications, precomm, tcomm
     }
 
     public static class MapM extends Mapper<LongWritable, Text, LongWritable, Text> {
@@ -68,14 +68,14 @@ public class HashToAlternate extends Configured implements Tool {
                     }
                 }
             }
-            //debugPrint("\n Emit " + id + " :", trace);
+            debugPrint("\n Emit " + id + " :", trace);
 
             if (!input[1].equals(String.valueOf(id))) {
 
                 // ////////////////////////////////EMIT (Vmin,Cv) //////////////////
                 context.write(new LongWritable(Vmin), new Text(input[1]));
                 context.getCounter(MRrounds.numberOfComunications).increment(1L);
-                //debugPrint(" [" + Vmin + ", (" + input[1] + ")]", trace);
+                debugPrint(" [" + Vmin + ", (" + input[1] + ")]", trace);
             }
             // /////////////////////////////////////
             // ////////////////////////////EMIT (u,Vmin) for all u in Cv
@@ -84,10 +84,10 @@ public class HashToAlternate extends Configured implements Tool {
             for (String s : input[1].split(",")) {
                 if (s.length() > 0) {
                     u = Long.parseLong(s);
-                    if (u > Vmin) {
+                    if (u >= Vmin) {
                         context.write(new LongWritable(u), new Text(String.valueOf(Vmin)));
                         context.getCounter(MRrounds.numberOfComunications).increment(1L);
-                        //debugPrint(" [" + s + ", " + Vmin + "]", trace);
+                        debugPrint(" [" + s + ", " + Vmin + "]", trace);
                     }
                 }
             }
@@ -110,7 +110,7 @@ public class HashToAlternate extends Configured implements Tool {
                     u = Long.parseLong(s);
                     if (u < Vmin) {
                         Vmin = u;
-                    } else if (u > id) {
+                    } else if (u >= id) {
                         if (first) {
                             CgtV.append(s);
                             first = false;
@@ -121,20 +121,20 @@ public class HashToAlternate extends Configured implements Tool {
                     }
                 }
             }
-            //debugPrint("\n Emit " + id + " :", trace);
+            debugPrint("\n Emit " + id + " :", trace);
 
             // ////////////////////////////////EMIT (Vmin,Cv) //////////////////
             if (CgtV.toString().length() != 0) {
                 context.write(new LongWritable(Vmin), new Text(CgtV.toString()));
                 context.getCounter(MRrounds.numberOfComunications).increment(1L);
-                //debugPrint(" [" + Vmin + ", (" + CgtV.toString() + ")]", trace);
+                debugPrint(" [" + Vmin + ", (" + CgtV.toString() + ")]", trace);
             }
             for (String s : input[1].split(",")) {
                 u = Long.parseLong(s);
                 if (s.length() > 0 && u > id) {
                     context.write(new LongWritable(u), new Text(String.valueOf(Vmin)));
                     context.getCounter(MRrounds.numberOfComunications).increment(1L);
-                    //debugPrint(" [" + s + ", " + Vmin + "]", trace);
+                    debugPrint(" [" + s + ", " + Vmin + "]", trace);
                 }
             }
         }
@@ -195,7 +195,7 @@ public class HashToAlternate extends Configured implements Tool {
 
             list = s.toString();
             context.write(new Text(String.valueOf(key)), new Text(list));
-            //debugPrint("\n " + key + "\t" + list, trace);
+            debugPrint("\n " + key + "\t" + list, trace);
         }
     }
 
@@ -203,6 +203,7 @@ public class HashToAlternate extends Configured implements Tool {
     public int run(String[] args) throws Exception {
         // TODO Auto-generated method stub
         long startTime = System.nanoTime();
+        args[0]="/home/ro0t/Desktop/BTP/graph/input1.txt"; 
         Path inputPath = new Path(args[0]);
         Path basePath = new Path(args[1]);
         Path outputPath = null;
@@ -232,14 +233,13 @@ public class HashToAlternate extends Configured implements Tool {
             Counters jobCntrs = job.getCounters();
             terminationValue = jobCntrs.findCounter(MRrounds.rounds).getValue();
             iterationCount++;
-            long comm=jobCntrs.findCounter(MRrounds.numberOfComunications).getValue();
+            long comm = jobCntrs.findCounter(MRrounds.numberOfComunications).getValue();
             long precom = jobCntrs.findCounter(MRrounds.precomm).getValue();
             System.out.println("\n Round " + iterationCount + " => #Communications : " + (comm - precom));
             jobCntrs.findCounter(MRrounds.precomm).setValue(comm);
         }
         long estimatedTime = System.nanoTime() - startTime;
-        System.out.println(" \nNumber of MR rounds: " + iterationCount + " Number of Communications: "
-                + numberOfComunications + " Time of Completion: " + estimatedTime / 1000000000 + "\n");
+        System.out.println(" \nNumber of MR rounds: " + iterationCount + " Time of Completion: " + estimatedTime / 1000000000 + "\n");
         return 0;
 
     }
